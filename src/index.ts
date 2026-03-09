@@ -39,4 +39,12 @@ export type {
   UsageTimeSeries,
   UsageDataPoint,
   ARouterErrorBody,
+  AudioResponseFormat,
+  TimestampGranularity,
+  TranscriptionRequest,
+  TranscriptionResponse,
+  TranscriptionWord,
+  TranscriptionSegment,
+  TranslationRequest,
+  TranslationResponse,
 } from "./types";

@@ -235,6 +235,65 @@ export interface UsageDataPoint {
   estimated_cost_usd: number;
 }
 
+// ── Audio (OpenAI-compatible) ────────────────────────────────────────
+
+export type AudioResponseFormat = "json" | "text" | "srt" | "verbose_json" | "vtt";
+export type TimestampGranularity = "word" | "segment";
+
+export interface TranscriptionRequest {
+  file: Blob | File;
+  model: string;
+  language?: string;
+  prompt?: string;
+  response_format?: AudioResponseFormat;
+  temperature?: number;
+  timestamp_granularities?: TimestampGranularity[];
+}
+
+export interface TranscriptionResponse {
+  text: string;
+  task?: string;
+  language?: string;
+  duration?: number;
+  words?: TranscriptionWord[];
+  segments?: TranscriptionSegment[];
+}
+
+export interface TranscriptionWord {
+  word: string;
+  start: number;
+  end: number;
+}
+
+export interface TranscriptionSegment {
+  id: number;
+  seek: number;
+  start: number;
+  end: number;
+  text: string;
+  tokens: number[];
+  temperature: number;
+  avg_logprob: number;
+  compression_ratio: number;
+  no_speech_prob: number;
+}
+
+export interface TranslationRequest {
+  file: Blob | File;
+  model: string;
+  prompt?: string;
+  response_format?: AudioResponseFormat;
+  temperature?: number;
+}
+
+export interface TranslationResponse {
+  text: string;
+  task?: string;
+  language?: string;
+  duration?: number;
+  segments?: TranscriptionSegment[];
+}
+
 // ── Errors ───────────────────────────────────────────────────────────
 
 export interface ARouterErrorBody {
