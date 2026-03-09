@@ -16,6 +16,10 @@ import {
   UsageQuery,
   UsageSummary,
   UsageTimeSeries,
+  TranscriptionRequest,
+  TranscriptionResponse,
+  TranslationRequest,
+  TranslationResponse,
 } from "./types";
 import {
   ARouterError,
@@ -80,6 +84,28 @@ export class ARouter {
     );
   }
 
+  // ── Audio (OpenAI-compatible) ─────────────────────────────────
+
+  async createTranscription(
+    req: TranscriptionRequest,
+  ): Promise<TranscriptionResponse> {
+    const response = await this.multipartRequest(
+      "/v1/audio/transcriptions",
+      this.buildAudioForm(req),
+    );
+    return response.json() as Promise<TranscriptionResponse>;
+  }
+
+  async createTranslation(
+    req: TranslationRequest,
+  ): Promise<TranslationResponse> {
+    const response = await this.multipartRequest(
+      "/v1/audio/translations",
+      this.buildAudioForm(req),
+    );
+    return response.json() as Promise<TranslationResponse>;
+  }
+
   // ── Key Management (aligned with OpenRouter) ───────────────────
 
   async createKey(req: CreateKeyRequest): Promise<CreateKeyResponse> {
@@ -140,6 +166,52 @@ export class ARouter {
     if (query.key_id) params.set("key_id", query.key_id);
     if (query.granularity) params.set("granularity", query.granularity);
     return params.toString();
+  }
+
+  private buildAudioForm(req: TranscriptionRequest | TranslationRequest): FormData {
+    const form = new FormData();
+    const filename = req.file instanceof File ? req.file.name : "audio.mp3";
+    form.append("file", req.file, filename);
+    form.append("model", req.model);
+    if (req.prompt != null) form.append("prompt", req.prompt);
+    if (req.response_format != null) form.append("response_format", req.response_format);
+    if (req.temperature != null) form.append("temperature", String(req.temperature));
+    if ("language" in req && req.language != null) form.append("language", req.language);
+    if ("timestamp_granularities" in req && req.timestamp_granularities) {
+      for (const g of req.timestamp_granularities) {
+        form.append("timestamp_granularities[]", g);
+      }
+    }
+    return form;
+  }
+
+  private async multipartRequest(path: string, form: FormData): Promise<Response> {
+    const url = `${this.baseURL}${path}`;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), this.timeout);
+
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${this.apiKey}` },
+        body: form,
+        signal: controller.signal,
+      });
+    } catch (err: unknown) {
+      if (err instanceof DOMException && err.name === "AbortError") {
+        throw new ARouterError(0, "timeout", `Request timed out after ${this.timeout}ms`);
+      }
+      throw err;
+    } finally {
+      clearTimeout(timer);
+    }
+
+    if (!response.ok) {
+      await this.handleErrorResponse(response);
+    }
+
+    return response;
   }
 
   private async request<T>(
