@@ -26,6 +26,7 @@ import {
   AuthenticationError,
   RateLimitError,
   QuotaExceededError,
+  InsufficientCreditsError,
 } from "./errors";
 import { parseSSEStream } from "./stream";
 
@@ -280,6 +281,10 @@ export class ARouter {
     switch (response.status) {
       case 401:
         throw new AuthenticationError(message);
+      case 402: {
+        const payReq = response.headers.get("payment-required") ?? undefined;
+        throw new InsufficientCreditsError(message, payReq);
+      }
       case 429: {
         const retryAfter = response.headers.get("Retry-After");
         throw new RateLimitError(

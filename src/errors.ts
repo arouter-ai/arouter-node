@@ -34,3 +34,13 @@ export class QuotaExceededError extends ARouterError {
     this.name = "QuotaExceededError";
   }
 }
+
+export class InsufficientCreditsError extends ARouterError {
+  public readonly paymentRequired?: string;
+
+  constructor(message = "Insufficient credits, please top up your balance", paymentRequired?: string) {
+    super(402, "insufficient_credits", message);
+    this.name = "InsufficientCreditsError";
+    this.paymentRequired = paymentRequired;
+  }
+}

@@ -5,7 +5,11 @@ export {
   AuthenticationError,
   RateLimitError,
   QuotaExceededError,
+  InsufficientCreditsError,
 } from "./errors";
+
+export { withX402 } from "./x402";
+export type { X402Signer, X402Options, PaymentRequired } from "./x402";
 
 export type {
   ARouterConfig,
