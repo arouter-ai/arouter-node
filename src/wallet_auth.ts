@@ -86,7 +86,18 @@ export function withWalletAuth<T extends object>(
           const path = new URL(url).pathname;
 
           const ts = Math.floor(Date.now() / 1000);
-          const message = `arouter:${ts}:${method}:${path}`;
+
+          // Compute body hash for replay protection
+          let bodyHash = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+          const bodyContent = init?.body;
+          if (bodyContent && typeof bodyContent === "string") {
+            const encoder = new TextEncoder();
+            const data = encoder.encode(bodyContent);
+            const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+            bodyHash = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, "0")).join("");
+          }
+
+          const message = `arouter:${ts}:${method}:${path}:${bodyHash}`;
           const signature = await opts.signMessage(message);
 
           const headers = new Headers(init?.headers);
