@@ -45,6 +45,16 @@ export class ARouter {
     this._fetch = config.customFetch ?? globalThis.fetch;
   }
 
+  /** Create a new ARouter instance with overridden config values. */
+  cloneWith(overrides: Partial<ARouterConfig>): ARouter {
+    return new ARouter({
+      baseURL: overrides.baseURL ?? this.baseURL,
+      apiKey: overrides.apiKey ?? this.apiKey,
+      timeout: overrides.timeout ?? this.timeout,
+      customFetch: overrides.customFetch ?? this._fetch,
+    });
+  }
+
   // ── Chat Completion ──────────────────────────────────────────────
 
   async chatCompletion(
