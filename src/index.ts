@@ -11,6 +11,9 @@ export {
 export { withX402 } from "./x402";
 export type { X402Signer, X402Options, PaymentRequired } from "./x402";
 
+export { withWalletAuth } from "./wallet_auth";
+export type { WalletSigner, WalletAuthOptions } from "./wallet_auth";
+
 export type {
   ARouterConfig,
   Message,
