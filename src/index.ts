@@ -8,11 +8,14 @@ export {
   InsufficientCreditsError,
 } from "./errors";
 
-export { withX402 } from "./x402";
-export type { X402Signer, X402Options, PaymentRequired } from "./x402";
+export { withX402EvmPayment, withX402SolanaPayment, withX402Payment } from "./x402_payment";
 
 export { withWalletAuth, createWalletAuthFetch } from "./wallet_auth";
 export type { WalletSigner } from "./wallet_auth";
+
+/** @deprecated Use withX402EvmPayment / withX402Payment instead */
+export { withX402 } from "./x402";
+export type { X402Signer, X402Options, PaymentRequired } from "./x402";
 
 export type {
   ARouterConfig,

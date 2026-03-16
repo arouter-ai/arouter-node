@@ -1,26 +1,10 @@
 /**
- * x402 payment protocol support for the ARouter Node.js SDK.
+ * @deprecated Use {@link withX402EvmPayment} or {@link withX402Payment} from
+ * `x402_payment.ts` instead. Those use the official @x402/fetch SDK for
+ * standard protocol compliance and multi-chain support.
  *
- * When the server responds with 402 + PAYMENT-REQUIRED header, the client
- * automatically signs a payment and retries the request with the
- * PAYMENT-SIGNATURE header.
- *
- * @example
- * ```typescript
- * import { ARouter, withX402, type X402Signer } from "arouter";
- *
- * const signer: X402Signer = {
- *   async signPayment(paymentRequired) {
- *     // Use viem/ethers to sign the payment
- *     return signedPayload;
- *   }
- * };
- *
- * const client = withX402(
- *   new ARouter({ baseURL: "https://api.arouter.ai", apiKey: "lr_live_..." }),
- *   { signer },
- * );
- * ```
+ * This legacy implementation uses Proxy + globalThis.fetch mutation which is
+ * not concurrency-safe and uses a non-standard X402Signer interface.
  */
 
 import { InsufficientCreditsError } from "./errors";
