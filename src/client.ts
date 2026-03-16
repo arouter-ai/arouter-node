@@ -36,11 +36,23 @@ export class ARouter {
   private readonly baseURL: string;
   private readonly apiKey: string;
   private readonly timeout: number;
+  private readonly _fetch: typeof fetch;
 
   constructor(config: ARouterConfig) {
     this.baseURL = config.baseURL.replace(/\/+$/, "");
     this.apiKey = config.apiKey;
     this.timeout = config.timeout ?? DEFAULT_TIMEOUT;
+    this._fetch = config.customFetch ?? globalThis.fetch;
+  }
+
+  /** Create a new ARouter instance with overridden config values. */
+  cloneWith(overrides: Partial<ARouterConfig>): ARouter {
+    return new ARouter({
+      baseURL: overrides.baseURL ?? this.baseURL,
+      apiKey: overrides.apiKey ?? this.apiKey,
+      timeout: overrides.timeout ?? this.timeout,
+      customFetch: overrides.customFetch ?? this._fetch,
+    });
   }
 
   // ── Chat Completion ──────────────────────────────────────────────
@@ -193,7 +205,7 @@ export class ARouter {
 
     let response: Response;
     try {
-      response = await fetch(url, {
+      response = await this._fetch(url, {
         method: "POST",
         headers: { Authorization: `Bearer ${this.apiKey}` },
         body: form,
@@ -245,7 +257,7 @@ export class ARouter {
 
     let response: Response;
     try {
-      response = await fetch(url, {
+      response = await this._fetch(url, {
         method,
         headers,
         body: body !== undefined ? JSON.stringify(body) : undefined,

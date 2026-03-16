@@ -2,6 +2,8 @@ export interface ARouterConfig {
   baseURL: string;
   apiKey: string;
   timeout?: number;
+  /** Custom fetch function for request interception (e.g. wallet auth, x402 payment). */
+  customFetch?: typeof fetch;
 }
 
 // ── Chat Completion (OpenAI-compatible) ──────────────────────────────
