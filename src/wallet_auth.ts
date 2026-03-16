@@ -115,8 +115,13 @@ async function hashRequestBody(
     return { bodyHash: await sha256Hex(bytes), resolvedBody: body, extraHeaders: {} };
   }
 
-  // Blob or ReadableStream — best-effort: use empty hash (uncommon in SDK usage)
-  return { bodyHash: EMPTY_HASH, resolvedBody: body, extraHeaders: {} };
+  if (body instanceof Blob) {
+    const bytes = new Uint8Array(await body.arrayBuffer());
+    return { bodyHash: await sha256Hex(bytes), resolvedBody: bytes, extraHeaders: {} };
+  }
+
+  // ReadableStream cannot be hashed without consuming it — reject explicitly
+  throw new Error("ReadableStream body is not supported with wallet auth; use string, FormData, or ArrayBuffer");
 }
 
 async function sha256Hex(data: Uint8Array): Promise<string> {
