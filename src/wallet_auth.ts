@@ -45,11 +45,12 @@ export function createWalletAuthFetch(
   opts: WalletSigner,
 ): typeof fetch {
   return async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    const isRequest = input instanceof Request;
     const url = typeof input === "string"
       ? input
       : input instanceof URL
         ? input.toString()
-        : (input as Request).url;
+        : input.url;
 
     let parsedPath: string;
     try {
@@ -58,15 +59,24 @@ export function createWalletAuthFetch(
       parsedPath = url.startsWith("/") ? url.split("?")[0] : "/";
     }
 
-    const method = init?.method ?? (input instanceof Request ? input.method : "GET");
+    const method = init?.method ?? (isRequest ? input.method : "GET");
     const ts = Math.floor(Date.now() / 1000);
 
-    const { bodyHash, resolvedBody, extraHeaders } = await hashRequestBody(init?.body);
+    // When called with a Request object (e.g. by @x402/fetch retry),
+    // init is undefined — read body from the Request itself.
+    let rawBody: BodyInit | null | undefined = init?.body;
+    if (rawBody === undefined && isRequest) {
+      const cloned = input.clone();
+      const text = await cloned.text();
+      rawBody = text || undefined;
+    }
+
+    const { bodyHash, resolvedBody, extraHeaders } = await hashRequestBody(rawBody);
 
     const message = `arouter:${ts}:${method}:${parsedPath}:${bodyHash}`;
     const signature = await opts.signMessage(message);
 
-    const headers = new Headers(init?.headers);
+    const headers = new Headers(isRequest && !init?.headers ? input.headers : init?.headers);
     headers.set(HEADER_WALLET_AUTH, `${opts.address}:${ts}:${signature}`);
     for (const [k, v] of Object.entries(extraHeaders)) {
       headers.set(k, v);
@@ -77,7 +87,7 @@ export function createWalletAuthFetch(
       headers.delete("Authorization");
     }
 
-    return baseFetch(input, { ...init, headers, body: resolvedBody });
+    return baseFetch(url, { ...init, method, headers, body: resolvedBody });
   };
 }
 
