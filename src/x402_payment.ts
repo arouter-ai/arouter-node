@@ -1,8 +1,9 @@
 /**
  * x402 automatic payment using Coinbase's official @x402 SDK.
  *
- * When the server returns 402 + PAYMENT-REQUIRED, the SDK automatically
- * signs a payment and retries. Works with EVM (Base) and Solana networks.
+ * On first request the SDK pays via x402, caches the API key returned in the
+ * X-API-Key response header, and uses it for all subsequent requests.
+ * If credits run low, the x402 layer automatically tops up again.
  *
  * @example EVM only
  * ```typescript
@@ -18,7 +19,6 @@
  */
 
 import type { ARouter } from "./client";
-import { createWalletAuthFetch, type WalletSigner } from "./wallet_auth";
 
 import { wrapFetchWithPayment } from "@x402/fetch";
 import { x402Client } from "@x402/core/client";
@@ -35,53 +35,72 @@ export interface EvmPaymentSigner {
 export type SvmPaymentSigner = ConstructorParameters<typeof ExactSvmScheme>[0];
 
 /**
- * Wraps an ARouter client with EVM x402 automatic payment + wallet auth.
+ * Creates a fetch that wraps @x402/fetch for payment handling and caches the
+ * API key returned in X-API-Key headers for subsequent requests.
+ */
+function createApiKeyCachingPaymentFetch(
+  x402: InstanceType<typeof x402Client>,
+): typeof fetch {
+  let cachedApiKey: string | null = null;
+
+  const paymentFetch = wrapFetchWithPayment(globalThis.fetch, x402);
+
+  return async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    if (cachedApiKey) {
+      const headers = new Headers(init?.headers);
+      const existing = headers.get("Authorization") ?? "";
+      if (!existing || existing === "Bearer" || existing === "Bearer ") {
+        headers.set("Authorization", `Bearer ${cachedApiKey}`);
+      }
+      init = { ...init, headers };
+    }
+
+    const resp = await paymentFetch(input, init);
+
+    const newKey = resp.headers.get("X-API-Key");
+    if (newKey) {
+      cachedApiKey = newKey;
+    }
+
+    return resp;
+  };
+}
+
+/**
+ * Wraps an ARouter client with EVM x402 automatic payment.
+ * First request triggers x402 payment → API key is cached → subsequent requests use Bearer.
  */
 export function withX402EvmPayment(
   client: ARouter,
   evmSigner: EvmPaymentSigner,
-  walletAuth?: WalletSigner,
 ): ARouter {
   const x402 = new x402Client();
-  // ExactEvmScheme expects a viem-compatible account
   x402.register("eip155:*", new ExactEvmScheme(evmSigner as any));
 
-  const walletSigner: WalletSigner = walletAuth ?? {
-    address: evmSigner.address,
-    signMessage: (msg: string) => evmSigner.signMessage({ message: msg }),
-  };
-
-  const walletFetch = createWalletAuthFetch(globalThis.fetch, walletSigner);
-  const paymentFetch = wrapFetchWithPayment(walletFetch, x402);
-
-  return client.cloneWith({ customFetch: paymentFetch });
+  return client.cloneWith({ customFetch: createApiKeyCachingPaymentFetch(x402) });
 }
 
 /**
- * Wraps an ARouter client with Solana x402 automatic payment + wallet auth.
+ * Wraps an ARouter client with Solana x402 automatic payment.
  */
 export function withX402SolanaPayment(
   client: ARouter,
   svmSigner: SvmPaymentSigner,
-  walletAuth: WalletSigner,
 ): ARouter {
   const x402 = new x402Client();
   x402.register("solana:*", new ExactSvmScheme(svmSigner));
 
-  const walletFetch = createWalletAuthFetch(globalThis.fetch, walletAuth);
-  const paymentFetch = wrapFetchWithPayment(walletFetch, x402);
-
-  return client.cloneWith({ customFetch: paymentFetch });
+  return client.cloneWith({ customFetch: createApiKeyCachingPaymentFetch(x402) });
 }
 
 /**
- * Wraps an ARouter client with dual-chain (EVM + Solana) x402 payment + wallet auth.
+ * Wraps an ARouter client with dual-chain (EVM + Solana) x402 payment.
  */
 export function withX402Payment(
   client: ARouter,
   opts: {
-    evm?: { signer: EvmPaymentSigner; walletAuth?: WalletSigner };
-    solana?: { signer: SvmPaymentSigner; walletAuth: WalletSigner };
+    evm?: { signer: EvmPaymentSigner };
+    solana?: { signer: SvmPaymentSigner };
   },
 ): ARouter {
   const x402 = new x402Client();
@@ -93,20 +112,5 @@ export function withX402Payment(
     x402.register("solana:*", new ExactSvmScheme(opts.solana.signer));
   }
 
-  const walletSigner: WalletSigner | undefined =
-    opts.evm?.walletAuth ??
-    (opts.evm
-      ? {
-          address: opts.evm.signer.address,
-          signMessage: (msg: string) => opts.evm!.signer.signMessage({ message: msg }),
-        }
-      : opts.solana?.walletAuth);
-
-  let baseFetch: typeof fetch = globalThis.fetch;
-  if (walletSigner) {
-    baseFetch = createWalletAuthFetch(baseFetch, walletSigner);
-  }
-  const paymentFetch = wrapFetchWithPayment(baseFetch, x402);
-
-  return client.cloneWith({ customFetch: paymentFetch });
+  return client.cloneWith({ customFetch: createApiKeyCachingPaymentFetch(x402) });
 }
