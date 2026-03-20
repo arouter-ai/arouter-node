@@ -10,8 +10,8 @@ export {
 
 export { withX402EvmPayment, withX402SolanaPayment, withX402Payment } from "./x402_payment";
 
-export { withWalletAuth, createWalletAuthFetch } from "./wallet_auth";
-export type { WalletSigner } from "./wallet_auth";
+export { authenticateWithSIWx, withSIWxAuth } from "./siwx";
+export type { WalletSigner, SIWxOptions, SIWxAuthResult } from "./siwx";
 
 /** @deprecated Use withX402EvmPayment / withX402Payment instead */
 export { withX402 } from "./x402";
