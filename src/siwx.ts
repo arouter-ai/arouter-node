@@ -3,7 +3,7 @@
  *
  * Allows wallet-based authentication via the x402 CAIP-122 standard.
  * The wallet signs a SIWx message, sends it to POST /v1/x402/auth,
- * and receives an API key for subsequent requests.
+ * and receives a wallet JWT for subsequent requests.
  *
  * @example EVM
  * ```typescript
@@ -12,11 +12,11 @@
  * import { privateKeyToAccount } from "viem/accounts";
  *
  * const account = privateKeyToAccount("0x...");
- * const { apiKey } = await authenticateWithSIWx("https://api.arouter.ai", {
+ * const { jwt } = await authenticateWithSIWx("https://api.arouter.ai", {
  *   address: account.address,
  *   signMessage: (msg) => account.signMessage({ message: msg }),
  * });
- * const client = new ARouter({ baseURL: "https://api.arouter.ai", apiKey });
+ * const client = new ARouter({ baseURL: "https://api.arouter.ai", apiKey: jwt });
  * ```
  */
 
@@ -36,9 +36,17 @@ export interface SIWxOptions {
 }
 
 export interface SIWxAuthResult {
-  apiKey: string;
+  jwt: string;
   tenantId: string;
   keyId: string;
+}
+
+function toBase64(value: string): string {
+  const maybeBuffer = (globalThis as { Buffer?: { from: (input: string, encoding: string) => { toString: (enc: string) => string } } }).Buffer;
+  if (maybeBuffer) {
+    return maybeBuffer.from(value, "utf8").toString("base64");
+  }
+  return btoa(value);
 }
 
 function generateNonce(): string {
@@ -80,7 +88,7 @@ function createSIWxMessage(
 
 /**
  * Authenticates with ARouter using SIWx (Sign-In-With-X).
- * Returns an API key that can be used for all subsequent requests.
+ * Returns a wallet JWT that can be used for all subsequent requests.
  */
 export async function authenticateWithSIWx(
   baseURL: string,
@@ -95,7 +103,7 @@ export async function authenticateWithSIWx(
   const signature = await signer.signMessage(message);
 
   const payload = JSON.stringify({ message, signature });
-  const header = btoa(payload);
+  const header = toBase64(payload);
 
   const resp = await fetch(url.toString(), {
     method: "POST",
@@ -113,7 +121,7 @@ export async function authenticateWithSIWx(
   const data = await resp.json();
 
   return {
-    apiKey: data.api_key ?? "",
+    jwt: data.jwt ?? "",
     tenantId: data.tenant_id ?? "",
     keyId: data.key_id ?? "",
   };
@@ -121,7 +129,7 @@ export async function authenticateWithSIWx(
 
 /**
  * Wraps an ARouter client with SIWx authentication.
- * On first call, authenticates via SIWx and caches the API key.
+ * On first call, authenticates via SIWx and sets the wallet JWT as bearer token.
  */
 export async function withSIWxAuth(
   client: ARouter,
@@ -129,6 +137,6 @@ export async function withSIWxAuth(
   opts?: SIWxOptions,
 ): Promise<ARouter> {
   const baseURL = (client as any).baseURL as string;
-  const { apiKey } = await authenticateWithSIWx(baseURL, signer, opts);
-  return client.cloneWith({ apiKey });
+  const { jwt } = await authenticateWithSIWx(baseURL, signer, opts);
+  return client.cloneWith({ apiKey: jwt });
 }
