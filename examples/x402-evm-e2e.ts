@@ -22,7 +22,7 @@ async function main() {
 
   try {
     const resp = await client.chatCompletion({
-      model: "openrouter/auto",
+      model: "auto",
       messages: [{ role: "user", content: "Say hi in exactly 3 words" }],
     });
     console.log("Node EVM x402 PASS");

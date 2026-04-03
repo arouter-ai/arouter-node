@@ -119,7 +119,7 @@ export class ARouter {
     return response.json() as Promise<TranslationResponse>;
   }
 
-  // ── Key Management (aligned with OpenRouter) ───────────────────
+  // ── Key Management ─────────────────────────────────────────────
 
   async createKey(req: CreateKeyRequest): Promise<CreateKeyResponse> {
     return this.request<CreateKeyResponse>("POST", "/api/v1/keys", req);

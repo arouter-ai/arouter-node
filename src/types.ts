@@ -83,7 +83,7 @@ export interface ChunkChoice {
   finish_reason: "stop" | "length" | "tool_calls" | "content_filter" | null;
 }
 
-// ── Key Management (aligned with OpenRouter) ─────────────────────────
+// ── Key Management ───────────────────────────────────────────────────
 
 export interface KeyObject {
   hash: string;
