@@ -100,6 +100,11 @@ export interface KeyObject {
   usage_daily: number;
   usage_weekly: number;
   usage_monthly: number;
+  byok_usage: number;
+  byok_usage_daily: number;
+  byok_usage_weekly: number;
+  byok_usage_monthly: number;
+  include_byok_in_limit: boolean;
   created_at: string;
   updated_at?: string | null;
   expires_at?: string | null;
@@ -112,6 +117,7 @@ export interface CreateKeyRequest {
   expires_at?: string;
   allowed_providers?: string[];
   allowed_models?: string[];
+  include_byok_in_limit?: boolean;
 }
 
 export interface CreateKeyResponse {
@@ -126,6 +132,7 @@ export interface UpdateKeyRequest {
   limit_reset?: "daily" | "weekly" | "monthly" | null;
   allowed_providers?: string[];
   allowed_models?: string[];
+  include_byok_in_limit?: boolean;
 }
 
 export interface UpdateKeyResponse {
@@ -204,6 +211,8 @@ export interface ProviderUsage {
   input_tokens: number;
   output_tokens: number;
   estimated_cost_usd: number;
+  byok_requests?: number;
+  byok_cost_nano_usd?: number;
 }
 
 export interface ModelUsage {
@@ -213,6 +222,8 @@ export interface ModelUsage {
   input_tokens: number;
   output_tokens: number;
   estimated_cost_usd: number;
+  byok_requests?: number;
+  byok_cost_nano_usd?: number;
 }
 
 export interface UsageSummary {
@@ -221,6 +232,10 @@ export interface UsageSummary {
   total_output_tokens: number;
   total_tokens: number;
   estimated_cost_usd: number;
+  byok_requests?: number;
+  byok_cost_nano_usd?: number;
+  platform_requests?: number;
+  platform_cost_nano_usd?: number;
   by_provider?: ProviderUsage[];
   by_model?: ModelUsage[];
 }
